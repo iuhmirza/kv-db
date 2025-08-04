@@ -1,5 +1,3 @@
-Of course\! Here is the updated `README.md` file including the new information about the command-line client.
-
 # kv-db 🦀
 
 An in-memory, multi-threaded key-value database server written in Rust. This repository demonstrates two common concurrency patterns for handling shared state: the **Actor Model** (using channels) and **Shared Memory Concurrency** (using `RwLock`).
