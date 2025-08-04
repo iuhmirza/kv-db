@@ -1,8 +1,8 @@
 use std::collections::HashMap;
-use std::io::{Read, Write};
 use std::net;
 use std::sync::mpsc;
 use std::thread;
+use kv_db::{Frame, read_frame, write_response, ReadFrameError};
 
 enum Command {
     Put(String, String),
@@ -32,91 +32,11 @@ fn run_db_worker(rx: mpsc::Receiver<Command>) {
     }
 }
 
-#[derive(Debug)]
-enum ReadFrameError {
-    IoError(std::io::Error),
-    InvalidUtf8(std::string::FromUtf8Error),
-    InvalidCommand,
-}
-
-impl std::fmt::Display for ReadFrameError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ReadFrameError::IoError(err) => write!(f, "IO error: {}", err),
-            ReadFrameError::InvalidUtf8(err) => write!(f, "Invalid UTF-8: {}", err),
-            ReadFrameError::InvalidCommand => write!(f, "Invalid command"),
-        }
-    }
-}
-
-impl std::error::Error for ReadFrameError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            ReadFrameError::IoError(err) => Some(err),
-            ReadFrameError::InvalidUtf8(err) => Some(err),
-            ReadFrameError::InvalidCommand => None,
-        }
-    }
-}
-
-impl From<std::io::Error> for ReadFrameError {
-    fn from(err: std::io::Error) -> Self {
-        ReadFrameError::IoError(err)
-    }
-}
-
-impl From<std::string::FromUtf8Error> for ReadFrameError {
-    fn from(err: std::string::FromUtf8Error) -> Self {
-        ReadFrameError::InvalidUtf8(err)
-    }
-}
-
-fn read_string_from_stream(stream: &mut net::TcpStream) -> Result<String, ReadFrameError> {
-    let mut buffer = [0u8; 1];
-    stream.read_exact(&mut buffer)?;
-    let mut buffer: Vec<u8> = vec![0u8; buffer[0] as usize];
-    stream.read_exact(&mut buffer)?;
-    let s = String::from_utf8(buffer)?;
-    Ok(s)
-}
-
-
-enum Frame {
-    Put(String, String),
-    Get(String),
-    Delete(String),
-}
-
-fn read_frame(mut stream: &mut net::TcpStream) -> Result<Frame, ReadFrameError> {
-    let mut buffer = [0; 1];
-    stream.read_exact(&mut buffer)?;
-    match buffer[0] as char {
-        '=' => {
-            let key = read_string_from_stream(&mut stream)?;
-            Ok(Frame::Get(key))
-        }
-        '+' => {
-            let key = read_string_from_stream(&mut stream)?;
-            let value = read_string_from_stream(&mut stream)?;
-            Ok(Frame::Put(key, value))
-        }
-        '-' => {
-            let key = read_string_from_stream(&mut stream)?;
-            Ok(Frame::Delete(key))
-        }
-        _ => return Err(ReadFrameError::InvalidCommand),
-    }
-}
-
-fn write_response(stream: &mut net::TcpStream, buffer: &[u8]) -> () {
-    stream.write(&[buffer.len() as u8]);
-    stream.write_all(buffer);
-}
 
 fn handle_client(
     mut stream: net::TcpStream,
     sender: mpsc::Sender<Command>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), ReadFrameError> {
     loop {
         let frame = read_frame(&mut stream)?;
         match frame {
@@ -127,7 +47,7 @@ fn handle_client(
                     Ok(Some(v)) => v,
                     _ => String::from(""),
                 };
-                write_response(&mut stream, value.as_bytes())
+                write_response(&mut stream, value.as_bytes())?
             }
             Frame::Put(key, value) => {
                 sender.send(Command::Put(key, value));
