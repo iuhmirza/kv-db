@@ -1,12 +1,12 @@
-use kv_db::{Frame, read_string_from_stream, write_frame};
+use kv_db::protocol::{Request, read_string_from_stream, write_request};
 use std::io;
 use std::net;
 
-fn parse_args(args: &[&str]) -> Result<Frame, String> {
+fn parse_args(args: &[&str]) -> Result<Request, String> {
     match args {
-        ["get", key] => Ok(Frame::Get(key.to_string())),
-        ["put", key, value] => Ok(Frame::Put(key.to_string(), value.to_string())),
-        ["del", key] => Ok(Frame::Delete(key.to_string())),
+        ["get", key] => Ok(Request::Get(key.to_string())),
+        ["put", key, value] => Ok(Request::Put(key.to_string(), value.to_string())),
+        ["del", key] => Ok(Request::Delete(key.to_string())),
         _ => Err(String::from(
             "Invalid command. Use 'get <key>', 'put <key> <value>', 'del <key>' or 'exit'.",
         )),
@@ -28,15 +28,15 @@ fn main() {
         if args[0] == "exit" {
             break
         }
-        let frame = match parse_args(&args) {
+        let request = match parse_args(&args) {
             Ok(f) => f,
             Err(e) => {
                 eprintln!("{e}");
                 continue;
             }
         };
-        write_frame(&mut stream, &frame).expect("Failed to write frame to TCP stream");
-        if let Frame::Get(key) = frame {
+        write_request(&mut stream, &request).expect("Failed to write frame to TCP stream");
+        if let Request::Get(key) = request {
             let value = read_string_from_stream(&mut stream).expect("expected string from stream");
             println!("{key}:{value}");
         }
