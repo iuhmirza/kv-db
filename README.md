@@ -1,3 +1,5 @@
+Of course\! Here is the updated `README.md` file including the new information about the command-line client.
+
 # kv-db 🦀
 
 An in-memory, multi-threaded key-value database server written in Rust. This repository demonstrates two common concurrency patterns for handling shared state: the **Actor Model** (using channels) and **Shared Memory Concurrency** (using `RwLock`).
@@ -12,6 +14,7 @@ The server listens on `127.0.0.1:6379` and communicates over a basic TCP protoco
   * **Multi-threaded**: Each client connection is handled in a separate thread.
   * **Basic Operations**: Supports `GET`, `PUT`, and `DELETE` operations.
   * **Concurrency Demonstrations**: Provides two distinct branches/files to showcase different concurrency models in Rust.
+  * **Interactive CLI Client**: A simple client to interact with the server from the command line.
 
 -----
 
@@ -37,7 +40,7 @@ This version wraps the `HashMap` in an `Arc<RwLock<...>>`. An `Arc` (Atomically 
 
 -----
 
-## 🚀 Getting Started
+## 🚀 Usage
 
 ### Prerequisites
 
@@ -52,7 +55,7 @@ You must have the Rust toolchain installed. You can install it from [rust-lang.o
     cd kv-db
     ```
 
-2.  Choose which version you want to run. You'll likely need to configure your `Cargo.toml` to specify the binaries if both `main.rs` files are in the `src/bin` directory. Assuming they are named `mp.rs` and `lock.rs`:
+2.  Choose which server version you want to run. Assuming the server binaries are named `mp` and `lock`, you can run them as follows:
 
     **To run the Actor Model version:**
 
@@ -67,6 +70,37 @@ You must have the Rust toolchain installed. You can install it from [rust-lang.o
     ```
 
     The server will start and listen on `127.0.0.1:6379`.
+
+### 💻 Running the Client
+
+The project includes an interactive command-line client to communicate with the server.
+
+1.  First, ensure one of the server versions is running in a separate terminal.
+
+2.  In a new terminal, run the client (assuming the client binary is named `client`):
+
+    ```bash
+    cargo run --bin client
+    ```
+
+3.  You can now send commands to the server. The available commands are:
+
+      * `put <key> <value>`: Stores a value for the given key.
+      * `get <key>`: Retrieves the value for the given key.
+      * `del <key>`: Deletes the key and its value.
+      * `exit`: Closes the client.
+
+    **Example Session:**
+
+    ```
+    > put framework Actix
+    > get framework
+    framework:Actix
+    > del framework
+    > get framework
+    framework:
+    > exit
+    ```
 
 -----
 
@@ -100,4 +134,3 @@ The server uses a simple custom binary protocol. Each message part is prefixed w
       * For `PUT`, returns the old value.
       * For `DELETE`, returns the deleted value.
       * If a key is not found, returns an empty string with length 0.
------
